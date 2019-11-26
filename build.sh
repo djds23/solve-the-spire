@@ -1,1 +1,1 @@
-./node_modules/bin/elm make src/Main.elm --output=dist/main.js
+./node_modules/elm/bin/elm make src/Main.elm --output=dist/main.js
