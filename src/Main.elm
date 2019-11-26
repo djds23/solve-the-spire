@@ -3,7 +3,7 @@ module Main exposing (..)
 import Browser.Events exposing (onKeyPress)
 import Json.Decode as Decode
 import Browser exposing (Document)
-import Html exposing (Html, button, div, p, h1, text)
+import Html exposing (Html, button, div, p, h1, text, ol, li)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
 
@@ -21,9 +21,32 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     onKeyPress keyDecoder
 
+keyDecoder : Decode.Decoder Msg
+keyDecoder =
+  (Decode.field "key" Decode.string)
+    |> Decode.map codeToMessage
+
+codeToMessage code =
+  case String.uncons code of 
+    Just (char, "") -> charToMessage char
+    _ -> Noop
+
+charToMessage : Char -> Msg
+charToMessage char = 
+  case char of 
+    '1' -> AddStop elite
+    '2' -> AddStop rest
+    '3' -> AddStop merchant
+    '4' -> AddStop unknown
+    '5' -> AddStop enemy
+    _ -> Noop
+
 -- MODEL
 
-type alias Stop = { base: Int, name: String }
+type alias Stop = { base: Int
+  , name: String
+  , icon: String
+  , hotKey: Char }
 
 type alias Path = List Stop
 
@@ -34,11 +57,11 @@ type alias Model = { act: Act }
 headPath act = 
   List.head act
 
-elite = Stop 5 "Elite"
-rest = Stop 4 "Rest"
-merchant = Stop 3 "Merchant"
-unknown = Stop 2 "Unknown"
-enemy = Stop 1 "Enemy"
+elite = Stop 5 "Elite" "🦑" '1'
+rest = Stop 4 "Rest" "🛏" '2'
+merchant = Stop 3 "Merchant" "💰" '3'
+unknown = Stop 2 "Unknown" "🎲" '4'
+enemy = Stop 1 "Enemy" "🦐" '5'
 
 
 stops = [ 
@@ -55,28 +78,6 @@ init _ = (Model [], Cmd.none)
 
 type Msg = AddStop Stop
   | Noop
-
-
-keyDecoder : Decode.Decoder Msg
-keyDecoder =
-  (Decode.field "key" Decode.string)
-    |> Decode.map codeToMessage
-
-
-codeToMessage code =
-  case String.uncons code of 
-    Just (char, "") -> charToMessage char
-    _ -> Noop
-
-charToMessage : Char -> Msg
-charToMessage char = 
-  case char of 
-    '1' -> AddStop elite
-    '2' -> AddStop rest
-    '3' -> AddStop merchant
-    '4' -> AddStop unknown
-    '5' -> AddStop enemy
-    _ -> Noop
 
 addStop model stop =
   case headPath model of
@@ -108,10 +109,26 @@ baseCss = [ style "max-width" "38rem"
   , style "margin" "auto" ]
 
 buttonFor stop =
-  button [ onClick (AddStop stop) ] [ text stop.name ]
+  button [ onClick (AddStop stop) ] [ text (buttonTextFor stop) ]
+
+buttonTextFor stop =
+  "#" ++ (String.fromChar stop.hotKey) ++ " " ++ stop.name 
 
 buttons =
   div [] (List.map buttonFor stops)
+
+renderAct : Act -> Html Msg
+renderAct act =
+  case headPath act of
+    Just path -> ol [] (pathList path)
+    Nothing -> ol [] [ li [] [ text "Add stops to create a Path"] ]
+
+pathList : Path -> List (Html Msg)
+pathList path = 
+  List.map stopToItem path
+
+stopToItem stop =
+  li [] [ text (stop.icon ++ " " ++ stop.name) ]
 
 solveAct: Act -> String
 solveAct act =
@@ -128,7 +145,6 @@ view : Model -> Document Msg
 view model =
   Document "Solve The Spire" [ (mainDiv model) ]
 
-
 mainDiv model = 
   div baseCss
     [
@@ -136,4 +152,5 @@ mainDiv model =
     , p [] [ text description ]
     , p [] [ text (solveAct model.act) ]
     , buttons
+    , renderAct model.act
     ]
