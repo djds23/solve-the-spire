@@ -20,7 +20,7 @@ type alias Path = List Stop
 
 type alias Act = List Path
 
-type alias Model = Act
+type alias Model = { act: Act, keypress: Bool }
 
 headPath act = 
   List.head act
@@ -38,11 +38,7 @@ stops = [
   , unknown
   , enemy ]
 
-emptyAct: Act
-emptyAct = []
-
-init : Model
-init = emptyAct
+init = { act = [], keypress = False }
 
 
 -- UPDATE
@@ -58,7 +54,7 @@ update : Msg -> Model -> Model
 update msg model =
   case msg of
     AddStop stop ->
-      [ addStop model stop ]
+      { model | act = [ addStop model.act stop ] }
 
 
 -- VIEW
@@ -102,6 +98,6 @@ view model =
     [
     h1 [] [ text "Solve The Spire" ]
     , p [] [ text description ]
-    , p [] [ text (solveAct model) ]
+    , p [] [ text (solveAct model.act) ]
     , buttons
     ]
