@@ -1,5 +1,8 @@
 module Main exposing (..)
-import Browser
+
+import Browser.Events exposing (onKeyPress)
+import Json.Decode as Decode
+import Browser exposing (Document)
 import Html exposing (Html, button, div, p, h1, text)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
@@ -7,10 +10,16 @@ import Html.Attributes exposing (style)
 
 -- MAIN
 
-
+main : Program () Model Msg
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.document { init = init, subscriptions = subscriptions, update = update, view = view }
 
+
+-- SUBSCRIPTION
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    onKeyPress keyDecoder
 
 -- MODEL
 
@@ -20,7 +29,7 @@ type alias Path = List Stop
 
 type alias Act = List Path
 
-type alias Model = { act: Act, keypress: Bool }
+type alias Model = { act: Act, keypress: Maybe Char }
 
 headPath act = 
   List.head act
@@ -38,24 +47,30 @@ stops = [
   , unknown
   , enemy ]
 
-init = { act = [], keypress = False }
+init _ = (Model [] Nothing, Cmd.none)
 
 
 -- UPDATE
 
 type Msg = AddStop Stop
+  | CharacterKey (Maybe Char)
+
+keyDecoder : Decode.Decoder Msg
+keyDecoder =
+    Decode.map (\a -> CharacterKey (Maybe.map Tuple.first (String.uncons a))) (Decode.field "key" Decode.string)
 
 addStop model stop =
   case headPath model of
     Just path -> path ++ [ stop ]
     Nothing -> [ stop ]
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     AddStop stop ->
-      { model | act = [ addStop model.act stop ] }
-
+      ({ model | act = [ addStop model.act stop ] }, Cmd.none)
+    CharacterKey char ->
+      ({ model | keypress = char }, Cmd.none)
 
 -- VIEW
 
@@ -92,12 +107,22 @@ solvePath path =
   |> List.foldl (\a b -> a + b) 0 
   |> String.fromInt
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
+  Document "Solve The Spire" [ (mainDiv model) ]
+
+keyCodeP model = 
+  case model.keypress of 
+    Just code -> p [] [ text (String.fromChar code) ]
+    Nothing -> p [] [ text "Nothing Here!" ]
+
+
+mainDiv model = 
   div baseCss
     [
     h1 [] [ text "Solve The Spire" ]
     , p [] [ text description ]
     , p [] [ text (solveAct model.act) ]
+    , keyCodeP model
     , buttons
     ]
