@@ -119,10 +119,8 @@ solveAct act =
     Just path -> solvePath path
     Nothing -> "N/A"
 
-stopValue stop = stop.base
-
 solvePath path = 
-  (List.map stopValue path) 
+  (List.map .base path) 
   |> List.foldl (\a b -> a + b) 0 
   |> String.fromInt
 
