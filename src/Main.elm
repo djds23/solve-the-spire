@@ -29,7 +29,7 @@ type alias Path = List Stop
 
 type alias Act = List Path
 
-type alias Model = { act: Act, keypress: Maybe Char }
+type alias Model = { act: Act }
 
 headPath act = 
   List.head act
@@ -40,6 +40,7 @@ merchant = Stop 3 "Merchant"
 unknown = Stop 2 "Unknown"
 enemy = Stop 1 "Enemy"
 
+
 stops = [ 
   elite
   , rest
@@ -47,17 +48,35 @@ stops = [
   , unknown
   , enemy ]
 
-init _ = (Model [] Nothing, Cmd.none)
+init _ = (Model [], Cmd.none)
 
 
 -- UPDATE
 
 type Msg = AddStop Stop
-  | CharacterKey (Maybe Char)
+  | Noop
+
 
 keyDecoder : Decode.Decoder Msg
 keyDecoder =
-    Decode.map (\a -> CharacterKey (Maybe.map Tuple.first (String.uncons a))) (Decode.field "key" Decode.string)
+  (Decode.field "key" Decode.string)
+    |> Decode.map codeToMessage
+
+
+codeToMessage code =
+  case String.uncons code of 
+    Just (char, "") -> charToMessage char
+    _ -> Noop
+
+charToMessage : Char -> Msg
+charToMessage char = 
+  case char of 
+    '1' -> AddStop elite
+    '2' -> AddStop rest
+    '3' -> AddStop merchant
+    '4' -> AddStop unknown
+    '5' -> AddStop enemy
+    _ -> Noop
 
 addStop model stop =
   case headPath model of
@@ -69,8 +88,8 @@ update msg model =
   case msg of
     AddStop stop ->
       ({ model | act = [ addStop model.act stop ] }, Cmd.none)
-    CharacterKey char ->
-      ({ model | keypress = char }, Cmd.none)
+    Noop ->
+      (model, Cmd.none)
 
 -- VIEW
 
@@ -111,11 +130,6 @@ view : Model -> Document Msg
 view model =
   Document "Solve The Spire" [ (mainDiv model) ]
 
-keyCodeP model = 
-  case model.keypress of 
-    Just code -> p [] [ text (String.fromChar code) ]
-    Nothing -> p [] [ text "Nothing Here!" ]
-
 
 mainDiv model = 
   div baseCss
@@ -123,6 +137,5 @@ mainDiv model =
     h1 [] [ text "Solve The Spire" ]
     , p [] [ text description ]
     , p [] [ text (solveAct model.act) ]
-    , keyCodeP model
     , buttons
     ]
